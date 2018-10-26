@@ -19,6 +19,7 @@ package eu.faircode.netguard;
     Copyright 2015-2018 by Marcel Bokhorst (M66B)
 */
 
+import android.annotation.SuppressLint;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.DialogInterface;
@@ -968,6 +969,7 @@ public class ActivityMain extends AppCompatActivity implements SharedPreferences
         }
     }
 
+    @SuppressLint("StaticFieldLeak")
     private void updateApplicationList(final String search) {
         Log.i(TAG, "Update search=" + search);
 

@@ -1,5 +1,3 @@
-package eu.faircode.netguard;
-
 /*
     This file is part of NetGuard.
 
@@ -18,6 +16,7 @@ package eu.faircode.netguard;
 
     Copyright 2015-2018 by Marcel Bokhorst (M66B)
 */
+package eu.faircode.netguard;
 
 import android.content.Context;
 import android.content.SharedPreferences;

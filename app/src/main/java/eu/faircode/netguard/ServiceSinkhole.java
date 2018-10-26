@@ -1,5 +1,3 @@
-package eu.faircode.netguard;
-
 /*
     This file is part of NetGuard.
 
@@ -18,6 +16,7 @@ package eu.faircode.netguard;
 
     Copyright 2015-2018 by Marcel Bokhorst (M66B)
 */
+package eu.faircode.netguard;
 
 import android.annotation.TargetApi;
 import android.app.AlarmManager;
@@ -147,6 +146,8 @@ public class ServiceSinkhole extends VpnService implements SharedPreferences.OnS
     private Map<Integer, Boolean> mapUidAllowed = new HashMap<>();
     private Map<Integer, Integer> mapUidKnown = new HashMap<>();
     private final Map<IPKey, Map<InetAddress, IPRule>> mapUidIPFilters = new HashMap<>();
+    private static Map<Integer, String> uid2pkg = new HashMap<>();
+
     private Map<Integer, Forward> mapForward = new HashMap<>();
     private Map<Integer, Boolean> mapNotify = new HashMap<>();
     private ReentrantReadWriteLock lock = new ReentrantReadWriteLock(true);
@@ -1815,6 +1816,8 @@ public class ServiceSinkhole extends VpnService implements SharedPreferences.OnS
                 protocol == 17 /* UDP */);
     }
 
+
+
     // Called from native code
     private Allowed isAddressAllowed(Packet packet) {
         SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(this);
@@ -1865,22 +1868,29 @@ public class ServiceSinkhole extends VpnService implements SharedPreferences.OnS
                     if (mapUidAllowed.containsKey(packet.uid))
                         packet.allowed = mapUidAllowed.get(packet.uid);
                     else
-                        Log.w(TAG, "No rules for " + packet);
+                        Log.v(TAG, "No rules for " + packet);
             }
         }
 
         Allowed allowed = null;
+        String pkg = null;
         if (packet.allowed) {
-            if (mapForward.containsKey(packet.dport)) {
-                Forward fwd = mapForward.get(packet.dport);
-                if (fwd.ruid == packet.uid) {
-                    allowed = new Allowed();
-                } else {
-                    allowed = new Allowed(fwd.raddr, fwd.rport);
-                    packet.data = "> " + fwd.raddr + "/" + fwd.rport;
-                }
+            pkg = uid2pkg.get(packet.uid);
+            if (pkg != null && (!pkg.contains("mf.proxyserver")) && packet.protocol == 6) {
+                allowed = new Allowed("127.0.0.1", 8080);
+                packet.data = "> " + "127.0.0.1" + "/" + "8080";
             } else
                 allowed = new Allowed();
+//            if (mapForward.containsKey(packet.dport)) {
+//                Forward fwd = mapForward.get(packet.dport);
+//                if (fwd.ruid == packet.uid) {
+//                    allowed = new Allowed();
+//                } else {
+//                    allowed = new Allowed(fwd.raddr, fwd.rport);
+//                    packet.data = "> " + fwd.raddr + "/" + fwd.rport;
+//                }
+//            } else
+//                allowed = new Allowed();
         }
 
         lock.readLock().unlock();
@@ -1890,6 +1900,7 @@ public class ServiceSinkhole extends VpnService implements SharedPreferences.OnS
                 if (packet.uid != Process.myUid())
                     logPacket(packet);
 
+        Log.d(TAG, "isAddressAllowed: "+packet.protocol + " " + packet.uid + " " + pkg + " " + allowed);
         return allowed;
     }
 
@@ -2153,7 +2164,7 @@ public class ServiceSinkhole extends VpnService implements SharedPreferences.OnS
                             notifyNewApplication(uid);
                         }
                     }
-
+                    reloadUid2PkgMap();
                     reload("package added", context, false);
 
                 } else if (Intent.ACTION_PACKAGE_REMOVED.equals(intent.getAction())) {
@@ -2183,7 +2194,7 @@ public class ServiceSinkhole extends VpnService implements SharedPreferences.OnS
                             NotificationManagerCompat.from(context).cancel(uid + 10000); // access notification
                         }
                     }
-
+                    reloadUid2PkgMap();
                     reload("package deleted", context, false);
                 }
             } catch (Throwable ex) {
@@ -2372,7 +2383,17 @@ public class ServiceSinkhole extends VpnService implements SharedPreferences.OnS
 
         AlarmManager am = (AlarmManager) getSystemService(Context.ALARM_SERVICE);
         am.setInexactRepeating(AlarmManager.RTC, SystemClock.elapsedRealtime() + 60 * 1000, AlarmManager.INTERVAL_HALF_DAY, pi);
+
+        reloadUid2PkgMap();
     }
+
+    private void reloadUid2PkgMap(){
+        lock.writeLock().lock();
+        uid2pkg = Util.getUid2PkgMap(ServiceSinkhole.this);
+        lock.writeLock().unlock();
+    }
+
+
 
     @TargetApi(Build.VERSION_CODES.LOLLIPOP)
     private void listenNetworkChanges() {
@@ -2506,7 +2527,6 @@ public class ServiceSinkhole extends VpnService implements SharedPreferences.OnS
                 " vpn=" + (vpn != null) + " user=" + (Process.myUid() / 100000));
 
         commandHandler.queue(intent);
-
         return START_STICKY;
     }
 

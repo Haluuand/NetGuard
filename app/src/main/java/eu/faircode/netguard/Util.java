@@ -1,5 +1,3 @@
-package eu.faircode.netguard;
-
 /*
     This file is part of NetGuard.
 
@@ -18,6 +16,7 @@ package eu.faircode.netguard;
 
     Copyright 2015-2018 by Marcel Bokhorst (M66B)
 */
+package eu.faircode.netguard;
 
 import android.Manifest;
 import android.annotation.TargetApi;
@@ -394,6 +393,22 @@ public class Util {
             Collections.sort(listResult);
         }
         return listResult;
+    }
+
+    public static Map<Integer, String> getUid2PkgMap(Context context) {
+        Map<Integer, String> map = new HashMap<>();
+        PackageManager pm = context.getPackageManager();
+        List<PackageInfo> infos = pm.getInstalledPackages(PackageManager.GET_META_DATA);
+        for (PackageInfo info:
+                infos){
+            try {
+                ApplicationInfo ai = pm.getApplicationInfo(info.packageName, 0);
+                map.put(ai.uid,info.packageName);
+            } catch (PackageManager.NameNotFoundException e) {
+                e.printStackTrace();
+            }
+        }
+        return map;
     }
 
     public static boolean canFilter(Context context) {

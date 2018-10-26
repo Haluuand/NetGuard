@@ -1,5 +1,3 @@
-package eu.faircode.netguard;
-
 /*
     This file is part of NetGuard.
 
@@ -18,6 +16,7 @@ package eu.faircode.netguard;
 
     Copyright 2015-2018 by Marcel Bokhorst (M66B)
 */
+package eu.faircode.netguard;
 
 public class Allowed {
     public String raddr;
@@ -31,5 +30,15 @@ public class Allowed {
     public Allowed(String raddr, int rport) {
         this.raddr = raddr;
         this.rport = rport;
+    }
+
+    @Override
+    public String toString() {
+        if (this.raddr != null && this.rport != 0){
+            return this.raddr + " " + String.valueOf(this.rport);
+        }else {
+            return "no redirected";
+        }
+
     }
 }
